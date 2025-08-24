@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Traily - Research Knowledge Graph",
+  "name": "Traily",
   "version": "1.0.0",
   "description": "Local-first research assistant with dynamic knowledge graphing using Google Gemini 2.5 Flash API",
   "permissions": [

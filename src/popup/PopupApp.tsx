@@ -134,7 +134,7 @@ const PopupApp: React.FC = () => {
           <h1 className="text-lg font-semibold">Traily</h1>
           <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`} />
         </div>
-        <p className="text-primary-100 text-sm mt-1">Research Knowledge Graph</p>
+        <p className="text-primary-100 text-sm mt-1">Knowledge Graph</p>
       </div>
 
       {/* Tab Navigation */}
