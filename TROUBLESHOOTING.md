@@ -1,19 +1,42 @@
-# Traily Extension - Troubleshooting Guide
+# Traily Extension - En- **Web Options**: Dropdown appears with options to search Google or go to Wikipedia
+- **Smart Detection**: If you type "wikipedia.org", it offers direct navigation
 
-## Issue: Graphs and Nodes Not Displaying
+## Testing the New Functionality:ed Search Functionality
 
-### What I Fixed:
+## New Features Added:
 
-1. **Missing Content Processing Handler**: The background script wasn't handling messages from the content script.
-   - Added `PROCESS_CONTENT` message handler in background.ts
-   - Content script now properly communicates with background service
+### **Smart Search Interface**
+- **Dual Search**: Search both your knowledge graph AND the web from the same search box
+- **Smart Suggestions**: Shows whether your search query exists in your captured content
+- **Web Search Options**: Direct links to Google search, Wikipedia, or direct URL navigation
+- **Knowledge Graph Integration**: See existing results while offering web search options
 
-2. **Enhanced Debugging**: Added console logging throughout the pipeline:
-   - Content script logs when processing pages
-   - Background script logs when receiving content
-   - Side panel logs graph data loading
+### **How It Works:**
 
-3. **Sample Data for Testing**: Added a "Load Sample Data" button to test the graph visualization without waiting for content capture.
+1. **Search in Knowledge Graph**: Type in the search box to filter your captured content
+2. **Web Search Options**: If you have results, you'll see a green indicator "Found in your knowledge graph"
+3. **Search Options Dropdown**: Click or continue typing to see web search options:
+   - Search icon: Search web for "your query"
+   - Globe icon: Go to URL (if your input looks like a URL)
+   - Book icon: Search Wikipedia for "your query"
+
+### **Example Usage:**
+
+**Scenario**: You search for "wiki"
+- ✅ **Knowledge Graph**: Shows any captured Wikipedia pages in the background
+- ✅ **Web Options**: Dropdown appears with options to search Google or go to Wikipedia
+- ✅ **Smart Detection**: If you type "wikipedia.org", it offers direct navigation
+
+## Testing the New Functionality:
+
+1. **Open Side Panel**: Click extension icon → "View Knowledge Graph"
+2. **Search Test**: Type "wiki" or any term in the search box
+3. **Check Results**: 
+   - See filtered nodes in the graph background
+   - Notice the dropdown with web search options
+   - Green checkmark indicator if results found in knowledge graph
+4. **Try Web Search**: Click "Search web" to open Google in current tab
+5. **Try Direct URL**: Type "github.com" and select "Go to URL"
 
 ### How to Test:
 

@@ -48,6 +48,9 @@ const SidePanelApp: React.FC = () => {
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [allNodes, setAllNodes] = useState<GraphNode[]>([]); // Store all nodes for search
+  const [allEdges, setAllEdges] = useState<GraphEdge[]>([]); // Store all edges
+  const [hasKnowledgeResults, setHasKnowledgeResults] = useState(false);
   const [filters, setFilters] = useState({
     nodeType: 'all',
     dateRange: 'all',
@@ -150,6 +153,10 @@ const SidePanelApp: React.FC = () => {
           const { nodes: graphNodes, edges: graphEdges } = response.data;
           console.log('Received nodes:', graphNodes.length, 'edges:', graphEdges.length);
           
+          // Store all nodes and edges for search
+          setAllNodes(graphNodes);
+          setAllEdges(graphEdges);
+          
           // Transform nodes for ReactFlow
           const flowNodes = graphNodes.map((node: any) => ({
             ...node,
@@ -233,25 +240,89 @@ const SidePanelApp: React.FC = () => {
     
     if (!query.trim()) {
       // Reset to show all nodes
-      loadGraphData();
+      setNodes(allNodes.map((node: any) => ({
+        ...node,
+        type: 'default',
+        style: getNodeStyle(node.type),
+        data: {
+          ...node.data,
+          label: truncateLabel(node.data.label, 30)
+        }
+      })));
+      setEdges(allEdges.map((edge: any) => ({
+        ...edge,
+        type: 'default',
+        style: getEdgeStyle(edge.data.strength),
+        animated: edge.data.strength > 0.7
+      })));
+      setHasKnowledgeResults(false);
       return;
     }
 
     // Filter nodes based on search query
-    const filteredNodes = nodes.filter(node => 
+    const filteredNodes = allNodes.filter((node: any) => 
       node.data.label.toLowerCase().includes(query.toLowerCase()) ||
       (node.data.summary && node.data.summary.toLowerCase().includes(query.toLowerCase())) ||
-      (node.data.domain && node.data.domain.toLowerCase().includes(query.toLowerCase()))
+      (node.data.domain && node.data.domain.toLowerCase().includes(query.toLowerCase())) ||
+      (node.data.url && node.data.url.toLowerCase().includes(query.toLowerCase()))
     );
 
     // Filter edges to only show those connecting filtered nodes
-    const filteredNodeIds = new Set(filteredNodes.map(n => n.id));
-    const filteredEdges = edges.filter(edge => 
+    const filteredNodeIds = new Set(filteredNodes.map((n: any) => n.id));
+    const filteredEdges = allEdges.filter((edge: any) => 
       filteredNodeIds.has(edge.source) && filteredNodeIds.has(edge.target)
     );
 
-    setNodes(filteredNodes);
-    setEdges(filteredEdges);
+    // Transform for ReactFlow
+    const flowNodes = filteredNodes.map((node: any) => ({
+      ...node,
+      type: 'default',
+      style: getNodeStyle(node.type),
+      data: {
+        ...node.data,
+        label: truncateLabel(node.data.label, 30)
+      }
+    }));
+
+    const flowEdges = filteredEdges.map((edge: any) => ({
+      ...edge,
+      type: 'default',
+      style: getEdgeStyle(edge.data.strength),
+      animated: edge.data.strength > 0.7
+    }));
+
+    setNodes(flowNodes);
+    setEdges(flowEdges);
+    setHasKnowledgeResults(filteredNodes.length > 0);
+  };
+
+  // Handle web search
+  const handleWebSearch = (query: string) => {
+    if (!query.trim()) return;
+    
+    const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs[0]?.id) {
+        chrome.tabs.update(tabs[0].id, { url: searchUrl });
+      }
+    });
+  };
+
+  // Handle direct URL navigation
+  const handleDirectUrl = (url: string) => {
+    if (!url.trim()) return;
+    
+    let finalUrl = url;
+    // Add protocol if missing
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      finalUrl = `https://${url}`;
+    }
+    
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs[0]?.id) {
+        chrome.tabs.update(tabs[0].id, { url: finalUrl });
+      }
+    });
   };
 
   const applyFilters = (newFilters: typeof filters) => {
@@ -322,7 +393,12 @@ const SidePanelApp: React.FC = () => {
     return (
       <div className="flex items-center justify-center h-full bg-gray-50">
         <div className="text-center">
-          <div className="spinner mb-4"></div>
+          <div className="mb-4 flex justify-center">
+            <svg className="animate-spin w-8 h-8 text-primary-600" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          </div>
           <p className="text-gray-600">Loading knowledge graph...</p>
         </div>
       </div>
@@ -386,8 +462,11 @@ const SidePanelApp: React.FC = () => {
         <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10">
           <SearchInterface
             onSearch={handleSearch}
-            placeholder="Search pages, concepts, or content..."
+            onWebSearch={handleWebSearch}
+            onDirectUrl={handleDirectUrl}
+            placeholder="Search your knowledge graph or the web..."
             value={searchQuery}
+            hasKnowledgeResults={hasKnowledgeResults}
           />
         </div>
 
@@ -395,7 +474,11 @@ const SidePanelApp: React.FC = () => {
         {nodes.length === 0 && !isLoading && (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center">
-              <div className="text-6xl text-gray-300 mb-4">🕸️</div>
+              <div className="mb-4 flex justify-center">
+                <svg className="w-16 h-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+              </div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">No Content Captured Yet</h3>
               <p className="text-gray-600 mb-4">
                 Start browsing the web and Traily will automatically build your knowledge graph.
