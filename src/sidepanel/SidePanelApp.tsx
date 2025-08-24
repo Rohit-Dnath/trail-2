@@ -1125,6 +1125,70 @@ const SidePanelApp: React.FC = () => {
                 placeholder="e.g., Machine Learning Research"
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white/90 placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/30 mb-4"
               />
+              
+              {/* Dynamic Suggestions */}
+              <div className="mb-4">
+                {allNodes.length > 0 && (
+                  <>
+                    <p className="text-white/60 text-xs mb-2">From your research:</p>
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {/* Personalized suggestions from user's nodes */}
+                      {allNodes
+                        .filter(node => node.data.label && node.data.label.length > 3)
+                        .slice(0, 6)
+                        .map((node, index) => {
+                          const title = node.data.label.length > 20 
+                            ? node.data.label.substring(0, 20) + '...' 
+                            : node.data.label;
+                          return (
+                            <button
+                              key={`personal-${index}`}
+                              onClick={() => setExportMainNodeText(node.data.label)}
+                              className="px-3 py-1 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-400/30 rounded-lg text-blue-200 text-xs transition-all hover:scale-105"
+                              title={node.data.label}
+                            >
+                              {title}
+                            </button>
+                          );
+                        })
+                      }
+                    </div>
+                  </>
+                )}
+                
+                {/* <p className="text-white/60 text-xs mb-2">💡 Popular topics:</p>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {[
+                    'AI & Machine Learning', 'Web Development', 'Data Science', 'Software Engineering',
+                    'Blockchain & Crypto', 'Cybersecurity', 'Cloud Computing', 'DevOps & Automation'
+                  ].map((suggestion) => (
+                    <button
+                      key={suggestion}
+                      onClick={() => setExportMainNodeText(suggestion)}
+                      className="px-3 py-1 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-white/80 text-xs transition-all hover:scale-105"
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </div> */}
+                
+                {/* <p className="text-white/60 text-xs mb-2">🎯 Research formats:</p>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    'Research Project', 'Learning Journey', 'Tech Stack Analysis', 'Market Research',
+                    'Competitive Analysis', 'Literature Review', 'Study Notes'
+                  ].map((suggestion) => (
+                    <button
+                      key={suggestion}
+                      onClick={() => setExportMainNodeText(suggestion)}
+                      className="px-3 py-1 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-400/30 rounded-lg text-purple-200 text-xs transition-all hover:scale-105"
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </div> */}
+              </div>
+              
               <div className="flex space-x-3">
                 <button
                   onClick={() => {

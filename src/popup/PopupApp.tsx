@@ -294,14 +294,14 @@ const PopupApp: React.FC = () => {
 
             {/* Auto Capture */}
             <div className="flex items-center justify-between">
-              <div>
+              {/* <div>
                 <label className="block text-sm font-medium text-gray-700">
                   Auto-capture pages
                 </label>
                 <p className="text-xs text-gray-600">
                   Automatically analyze pages as you browse
                 </p>
-              </div>
+              </div> */}
               <input
                 type="checkbox"
                 checked={settings.autoCapture}
