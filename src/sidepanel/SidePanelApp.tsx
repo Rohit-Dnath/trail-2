@@ -49,9 +49,7 @@ const SidePanelApp: React.FC = () => {
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
-  const [showDashboard, setShowDashboard] = useState(true); // Default to true
   const [showMenu, setShowMenu] = useState(false);
-  const [showSitesEditor, setShowSitesEditor] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportMainNodeText, setExportMainNodeText] = useState('');
@@ -65,13 +63,14 @@ const SidePanelApp: React.FC = () => {
     domain: 'all'
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [currentZoom, setCurrentZoom] = useState(1); // Track zoom level for dynamic node sizing
 
-  // Popular sites data for widget - now customizable with real logos
+  // Popular sites data for widget - below search bar only
   const [popularSites, setPopularSites] = useState([
     { name: 'YouTube', url: 'https://youtube.com', logo: 'https://www.youtube.com/favicon.ico', color: 'from-red-500 to-red-600' },
     { name: 'GitHub', url: 'https://github.com', logo: 'https://github.com/favicon.ico', color: 'from-gray-600 to-gray-700' },
     { name: 'LinkedIn', url: 'https://linkedin.com', logo: 'https://linkedin.com/favicon.ico', color: 'from-blue-600 to-blue-700' },
-    { name: 'Twitter', url: 'https://twitter.com', logo: 'https://twitter.com/favicon.ico', color: 'from-blue-400 to-blue-500' },
+    { name: 'Twitter', url: 'https://x.com', logo: 'https://x.com/favicon.ico', color: 'from-blue-400 to-blue-500' },
     { name: 'Reddit', url: 'https://reddit.com', logo: 'https://reddit.com/favicon.ico', color: 'from-orange-500 to-orange-600' },
     { name: 'Stack Overflow', url: 'https://stackoverflow.com', logo: 'https://stackoverflow.com/favicon.ico', color: 'from-orange-400 to-yellow-500' },
     { name: 'Wikipedia', url: 'https://wikipedia.org', logo: 'https://wikipedia.org/favicon.ico', color: 'from-gray-500 to-gray-600' },
@@ -85,6 +84,17 @@ const SidePanelApp: React.FC = () => {
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // Update node styles when zoom changes
+  useEffect(() => {
+    if (nodes.length > 0) {
+      const updatedNodes = nodes.map(node => ({
+        ...node,
+        style: getNodeStyle(node.type || 'page', false, allNodes.length, currentZoom)
+      }));
+      setNodes(updatedNodes);
+    }
+  }, [currentZoom, allNodes.length]);
 
   // Load graph data on component mount
   useEffect(() => {
@@ -154,11 +164,14 @@ const SidePanelApp: React.FC = () => {
     // Transform for ReactFlow
     const flowNodes = sampleNodes.map(node => ({
       ...node,
-      style: getNodeStyle(node.type),
+      style: getNodeStyle(node.type, false, 0, currentZoom),
       data: {
         ...node.data,
-        label: truncateLabel(node.data.label, 30)
-      }
+        label: truncateLabel(node.data.label, 30),
+        fullLabel: node.data.label // Store full label for tooltip
+      },
+      // Add tooltip with full text
+      title: node.data.label || node.data.summary || 'Knowledge Node'
     }));
 
     const flowEdges = sampleEdges.map(edge => ({
@@ -195,11 +208,14 @@ const SidePanelApp: React.FC = () => {
               ...node,
               type: 'default',
               position,
-              style: getNodeStyle(node.type, false, graphNodes.length),
+              style: getNodeStyle(node.type, false, graphNodes.length, currentZoom),
               data: {
                 ...node.data,
-                label: truncateLabel(node.data.label, graphNodes.length <= 50 ? 8 : 3)
-              }
+                label: truncateLabel(node.data.label, graphNodes.length <= 50 ? 12 : 8),
+                fullLabel: node.data.label // Store full label for tooltip
+              },
+              // Add tooltip with full text
+              title: node.data.label || node.data.summary || 'Knowledge Node'
             };
           });
 
@@ -234,39 +250,49 @@ const SidePanelApp: React.FC = () => {
     setSelectedNode(node as GraphNode);
   }, []);
 
-  const getNodeStyle = (nodeType: string, isSearchResult = false, nodeCount = 0) => {
-    // Dynamic sizing based on node count
+  // Handle zoom changes to update node sizes
+  const onZoomChange = useCallback((zoomLevel: number) => {
+    setCurrentZoom(zoomLevel);
+  }, []);
+
+  const getNodeStyle = (nodeType: string, isSearchResult = false, nodeCount = 0, zoom = 1) => {
+    // Dynamic sizing based on node count and zoom level
     let baseSize;
     if (nodeCount <= 10) {
-      baseSize = isSearchResult ? 60 : 24; // Larger for fewer nodes
+      baseSize = isSearchResult ? 60 : 30; // Larger for fewer nodes
     } else if (nodeCount <= 50) {
-      baseSize = isSearchResult ? 50 : 18; // Medium size
+      baseSize = isSearchResult ? 50 : 25; // Medium size
     } else if (nodeCount <= 100) {
-      baseSize = isSearchResult ? 40 : 14; // Smaller for many nodes
+      baseSize = isSearchResult ? 40 : 20; // Smaller for many nodes
     } else {
-      baseSize = isSearchResult ? 30 : 10; // Very small for lots of nodes
+      baseSize = isSearchResult ? 35 : 18; // Still readable for lots of nodes
     }
 
-    const showText = baseSize >= 18; // Only show text if node is large enough
+    // Increase size based on zoom level
+    const zoomedSize = Math.max(18, baseSize * zoom);
+    const showText = zoomedSize >= 18; // Show text for readable sizes
     
     const baseStyle = {
-      width: baseSize,
-      height: baseSize,
-      borderRadius: '50%',
-      fontSize: showText ? '7px' : '0px',
+      width: zoomedSize,
+      height: zoomedSize,
+      borderRadius: zoomedSize < 30 ? '50%' : '12px', // Round for small nodes, rounded rect for larger
+      fontSize: showText ? Math.min(12, Math.max(7, zoomedSize * 0.3)) + 'px' : '0px',
       fontWeight: '600',
       border: '1px solid',
       display: 'flex',
       alignItems: 'center',
-      justifyContent: 'center',
+      justifyContent: 'flex-start', // Left align text
+      paddingLeft: zoomedSize < 30 ? '0' : '8px', // Add padding for larger nodes
       opacity: isSearchResult ? 1 : 0.8,
       transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
       backdropFilter: 'blur(12px)',
       color: showText ? '#ffffff' : 'transparent',
       cursor: 'pointer',
       boxShadow: isSearchResult ? '0 0 20px rgba(59, 130, 246, 0.6)' : '0 0 8px rgba(59, 130, 246, 0.3)',
-      textOverflow: 'hidden',
-      whiteSpace: 'nowrap' as const
+      textOverflow: 'ellipsis',
+      whiteSpace: 'nowrap' as const,
+      overflow: 'hidden',
+      textAlign: 'left' as const
     };
 
     switch (nodeType) {
@@ -365,11 +391,14 @@ const SidePanelApp: React.FC = () => {
           x: startX + col * spacingX,
           y: startY + row * spacingY
         },
-        style: getNodeStyle(node.type, false, allNodes.length),
+        style: getNodeStyle(node.type, false, allNodes.length, currentZoom),
         data: {
           ...node.data,
-          label: truncateLabel(node.data.label, allNodes.length <= 50 ? 8 : 3)
-        }
+          label: truncateLabel(node.data.label, allNodes.length <= 50 ? 12 : 8),
+          fullLabel: node.data.label // Store full label for tooltip
+        },
+        // Add tooltip with full text
+        title: node.data.label || node.data.summary || 'Knowledge Node'
       };
     });
     
@@ -541,43 +570,6 @@ const SidePanelApp: React.FC = () => {
     }, 'image/png');
   };
 
-  // Popular sites management
-  const addNewSite = (name: string, url: string) => {
-    if (name.trim() && url.trim()) {
-      const colors = [
-        'from-blue-500 to-blue-600',
-        'from-green-500 to-green-600',
-        'from-purple-500 to-purple-600',
-        'from-pink-500 to-pink-600',
-        'from-yellow-500 to-yellow-600',
-        'from-indigo-500 to-indigo-600'
-      ];
-      
-      const cleanUrl = url.trim().startsWith('http') ? url.trim() : `https://${url.trim()}`;
-      let logoUrl;
-      
-      try {
-        const domain = new URL(cleanUrl).hostname;
-        logoUrl = `https://${domain}/favicon.ico`;
-      } catch {
-        logoUrl = 'https://www.google.com/favicon.ico'; // Fallback
-      }
-      
-      const newSite = {
-        name: name.trim(),
-        url: cleanUrl,
-        logo: logoUrl,
-        color: colors[Math.floor(Math.random() * colors.length)]
-      };
-      
-      setPopularSites([...popularSites, newSite]);
-    }
-  };
-
-  const removeSite = (index: number) => {
-    setPopularSites(popularSites.filter((_, i) => i !== index));
-  };
-
   // Widget helper functions
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString('en-US', {
@@ -730,99 +722,7 @@ const SidePanelApp: React.FC = () => {
     </div>
   );
 
-  const PopularSitesWidget = () => {
-    const [newSiteName, setNewSiteName] = useState('');
-    const [newSiteUrl, setNewSiteUrl] = useState('');
-
-    return (
-      <div className="fixed bottom-6 left-6 bg-black/20 backdrop-blur-xl rounded-2xl p-4 border border-white/10 min-w-[220px]">
-        <div className="flex justify-between items-center mb-3">
-          <div className="text-white/90 text-sm font-medium">Popular Sites</div>
-          <button
-            onClick={() => setShowSitesEditor(!showSitesEditor)}
-            className="text-white/60 hover:text-white/80 transition-all"
-            title="Edit Sites"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-          </button>
-        </div>
-        
-        {showSitesEditor && (
-          <div className="mb-4 space-y-2">
-            <input
-              type="text"
-              placeholder="Site name"
-              value={newSiteName}
-              onChange={(e) => setNewSiteName(e.target.value)}
-              className="w-full px-2 py-1 bg-white/10 border border-white/20 rounded text-white/90 text-xs placeholder-white/50"
-            />
-            <input
-              type="text"
-              placeholder="Site URL"
-              value={newSiteUrl}
-              onChange={(e) => setNewSiteUrl(e.target.value)}
-              className="w-full px-2 py-1 bg-white/10 border border-white/20 rounded text-white/90 text-xs placeholder-white/50"
-            />
-            <button
-              onClick={() => {
-                addNewSite(newSiteName, newSiteUrl);
-                setNewSiteName('');
-                setNewSiteUrl('');
-              }}
-              className="w-full px-2 py-1 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-400/30 rounded text-white/90 text-xs transition-all"
-            >
-              Add Site
-            </button>
-          </div>
-        )}
-        
-        <div className="grid grid-cols-2 gap-2">
-          {popularSites.map((site, index) => (
-            <div 
-              key={index}
-              className="flex items-center space-x-2 p-2 rounded-xl bg-white/5 hover:bg-white/10 transition-all cursor-pointer group"
-            >
-              <img 
-                src={site.logo} 
-                alt={`${site.name} logo`} 
-                className="w-4 h-4 rounded-sm cursor-pointer"
-                onClick={() => window.open(site.url, '_blank')}
-                onError={(e) => {
-                  // Fallback to colored circle if logo fails
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
-                  target.nextElementSibling?.classList.remove('hidden');
-                }}
-              />
-              <div 
-                className={`w-4 h-4 rounded-full bg-gradient-to-br ${site.color} hidden cursor-pointer`}
-                onClick={() => window.open(site.url, '_blank')}
-              />
-              <span 
-                className="text-white/80 text-xs truncate flex-1 cursor-pointer"
-                onClick={() => window.open(site.url, '_blank')}
-              >
-                {site.name}
-              </span>
-              {showSitesEditor && (
-                <button
-                  onClick={() => removeSite(index)}
-                  className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 transition-all"
-                >
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
+  // Popular Sites component for below search bar only
   const PopularSitesBelowSearch = () => (
     <div className="absolute top-full mt-6 left-1/2 transform -translate-x-1/2 z-10">
       <div className="bg-black/30 backdrop-blur-xl rounded-2xl p-4 border border-white/20">
@@ -861,19 +761,68 @@ const SidePanelApp: React.FC = () => {
     </div>
   );
 
-  const DashboardToggle = () => (
-    <div className="fixed bottom-6 right-6">
-      <button
-        onClick={() => setShowDashboard(!showDashboard)}
-        className="bg-black/20 backdrop-blur-xl rounded-full p-3 border border-white/20 text-white/80 hover:bg-black/30 transition-all"
-        title={showDashboard ? "Hide Dashboard" : "Show Dashboard"}
-      >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
-      </button>
+  // Traily Logo Component - using actual logo
+  const TrailyLogo = () => (
+    <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-20">
+      <div className="flex items-center space-x-3 bg-black/20 backdrop-blur-xl rounded-2xl p-3 border border-white/10">
+        <img 
+          src="assets/traily-logo.png" 
+          alt="Traily Logo" 
+          className="w-8 h-8 rounded-lg"
+          onError={(e) => {
+            // Fallback to SVG icon if PNG fails to load
+            const target = e.target as HTMLImageElement;
+            target.style.display = 'none';
+            const fallback = target.nextElementSibling as HTMLElement;
+            if (fallback) {
+              fallback.style.display = 'flex';
+            }
+          }}
+        />
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 items-center justify-center" style={{ display: 'none' }}>
+          <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+        </div>
+        <span className="text-white/90 text-lg font-semibold">Traily</span>
+      </div>
     </div>
   );
+
+  const DeleteAllDataButton = () => {
+    const handleDeleteAllData = () => {
+      if (window.confirm('Are you sure you want to delete all knowledge graph data? This action cannot be undone.')) {
+        // Clear all extension storage
+        chrome.storage.local.clear(() => {
+          console.log('All data cleared');
+          // Reset the current state
+          setNodes([]);
+          setEdges([]);
+          setAllNodes([]);
+          setAllEdges([]);
+          setSelectedNode(null);
+          setSearchQuery('');
+          setHasKnowledgeResults(false);
+          // Show confirmation
+          alert('All knowledge graph data has been deleted successfully.');
+        });
+      }
+    };
+
+    return (
+      <div className="fixed bottom-6 right-6">
+        <button
+          onClick={handleDeleteAllData}
+          className="bg-red-500/20 backdrop-blur-xl rounded-full p-3 border border-red-400/30 text-red-300 hover:bg-red-500/30 hover:text-red-200 transition-all"
+          title="Delete All Data"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+        </button>
+      </div>
+    );
+  };
 
   const truncateLabel = (label: string, maxLength: number) => {
     return label.length > maxLength ? `${label.substring(0, maxLength)}...` : label;
@@ -894,11 +843,14 @@ const SidePanelApp: React.FC = () => {
           ...node,
           type: 'default',
           position,
-          style: getNodeStyle(node.type, false, allNodes.length),
+          style: getNodeStyle(node.type, false, allNodes.length, currentZoom),
           data: {
             ...node.data,
-            label: truncateLabel(node.data.label, allNodes.length <= 50 ? 8 : 3)
-          }
+            label: truncateLabel(node.data.label, allNodes.length <= 50 ? 12 : 8),
+            fullLabel: node.data.label // Store full label for tooltip
+          },
+          // Add tooltip with full text
+          title: node.data.label || node.data.summary || 'Knowledge Node'
         };
       });
 
@@ -937,11 +889,14 @@ const SidePanelApp: React.FC = () => {
         x: 500 + (index % 3) * 150,
         y: 250 + Math.floor(index / 3) * 120
       },
-      style: getNodeStyle(node.type, true, filteredNodes.length),
+      style: getNodeStyle(node.type, true, filteredNodes.length, currentZoom),
       data: {
         ...node.data,
-        label: truncateLabel(node.data.label, 15)
-      }
+        label: truncateLabel(node.data.label, 15),
+        fullLabel: node.data.label // Store full label for tooltip
+      },
+      // Add tooltip with full text
+      title: node.data.label || node.data.summary || 'Knowledge Node'
     }));
 
     const flowEdges = filteredEdges.map((edge: any) => ({
@@ -1025,11 +980,14 @@ const SidePanelApp: React.FC = () => {
         const flowNodes = graphNodes.map((node: any) => ({
           ...node,
           type: 'default',
-          style: getNodeStyle(node.type),
+          style: getNodeStyle(node.type, false, 0, currentZoom),
           data: {
             ...node.data,
-            label: truncateLabel(node.data.label, 30)
-          }
+            label: truncateLabel(node.data.label, 30),
+            fullLabel: node.data.label // Store full label for tooltip
+          },
+          // Add tooltip with full text
+          title: node.data.label || node.data.summary || 'Knowledge Node'
         }));
 
         const flowEdges = filteredEdges.map((edge: any) => ({
@@ -1112,7 +1070,7 @@ const SidePanelApp: React.FC = () => {
               value={searchQuery}
               hasKnowledgeResults={hasKnowledgeResults}
             />
-            {/* Popular Sites below search bar */}
+            {/* Popular Sites below search bar - kept as requested */}
             <PopularSitesBelowSearch />
           </div>
         </div>
@@ -1126,6 +1084,7 @@ const SidePanelApp: React.FC = () => {
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
             onNodeClick={onNodeClick}
+            onMove={(event, viewport) => onZoomChange(viewport.zoom)}
             fitView={false}
             attributionPosition="bottom-left"
             proOptions={{ hideAttribution: true }}
@@ -1146,10 +1105,10 @@ const SidePanelApp: React.FC = () => {
 
         {/* Widgets - Show by default */}
         <ClockWidget />
-        <PopularSitesWidget />
+        <TrailyLogo />
 
-        {/* Dashboard Toggle */}
-        <DashboardToggle />
+        {/* Delete All Data Button */}
+        <DeleteAllDataButton />
 
         {/* PNG Export Modal */}
         {showExportModal && (
