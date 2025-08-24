@@ -9,6 +9,35 @@ interface SearchInterfaceProps {
   hasKnowledgeResults?: boolean;
 }
 
+// Website logos mapping
+const websiteLogos: { [key: string]: string } = {
+  'youtube.com': 'https://www.youtube.com/favicon.ico',
+  'youtube': 'https://www.youtube.com/favicon.ico',
+  'yt': 'https://www.youtube.com/favicon.ico',
+  'google.com': 'https://www.google.com/favicon.ico',
+  'google': 'https://www.google.com/favicon.ico',
+  'github.com': 'https://github.com/favicon.ico',
+  'github': 'https://github.com/favicon.ico',
+  'twitter.com': 'https://twitter.com/favicon.ico',
+  'twitter': 'https://twitter.com/favicon.ico',
+  'facebook.com': 'https://facebook.com/favicon.ico',
+  'facebook': 'https://facebook.com/favicon.ico',
+  'linkedin.com': 'https://linkedin.com/favicon.ico',
+  'linkedin': 'https://linkedin.com/favicon.ico',
+  'reddit.com': 'https://reddit.com/favicon.ico',
+  'reddit': 'https://reddit.com/favicon.ico',
+  'stackoverflow.com': 'https://stackoverflow.com/favicon.ico',
+  'stackoverflow': 'https://stackoverflow.com/favicon.ico',
+  'wikipedia.org': 'https://wikipedia.org/favicon.ico',
+  'wikipedia': 'https://wikipedia.org/favicon.ico',
+  'amazon.com': 'https://amazon.com/favicon.ico',
+  'amazon': 'https://amazon.com/favicon.ico',
+  'netflix.com': 'https://netflix.com/favicon.ico',
+  'netflix': 'https://netflix.com/favicon.ico',
+  'instagram.com': 'https://instagram.com/favicon.ico',
+  'instagram': 'https://instagram.com/favicon.ico',
+};
+
 const SearchInterface: React.FC<SearchInterfaceProps> = ({
   onSearch,
   onWebSearch,
@@ -72,35 +101,91 @@ const SearchInterface: React.FC<SearchInterfaceProps> = ({
     return text.includes('.') && !text.includes(' ') && text.length > 3;
   };
 
+  // Function to get website logo
+  const getWebsiteLogo = (query: string): string | null => {
+    const lowerQuery = query.toLowerCase().trim();
+    
+    // Check for exact matches in our logo mapping
+    for (const [key, logo] of Object.entries(websiteLogos)) {
+      if (lowerQuery.includes(key)) {
+        return logo;
+      }
+    }
+    
+    // If it looks like a URL, try to get favicon
+    if (isUrl(lowerQuery)) {
+      try {
+        const url = lowerQuery.startsWith('http') ? lowerQuery : `https://${lowerQuery}`;
+        const domain = new URL(url).hostname;
+        return `https://${domain}/favicon.ico`;
+      } catch {
+        return null;
+      }
+    }
+    
+    return null;
+  };
+
+  const currentLogo = getWebsiteLogo(searchQuery);
+
   return (
     <div ref={dropdownRef} className="relative">
       <form onSubmit={handleSubmit} className="relative">
         <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <svg
-              className="h-5 w-5 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-              />
-            </svg>
+          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+            {currentLogo ? (
+              <div className="flex items-center space-x-2">
+                <img 
+                  src={currentLogo} 
+                  alt="Website logo" 
+                  className="h-5 w-5 rounded-sm"
+                  onError={(e) => {
+                    // Fallback to search icon if logo fails to load
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                    target.nextElementSibling?.classList.remove('hidden');
+                  }}
+                />
+                <svg
+                  className="h-5 w-5 text-white/60 hidden"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+              </div>
+            ) : (
+              <svg
+                className="h-5 w-5 text-white/60"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+            )}
           </div>
           <input
             type="text"
             value={searchQuery}
             onChange={handleInputChange}
             placeholder={placeholder}
-            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-            style={{ minWidth: '300px' }}
+            className="block w-full pl-12 pr-12 py-4 border border-white/30 rounded-2xl leading-5 bg-black/40 backdrop-blur-xl placeholder-white/50 focus:outline-none focus:placeholder-white/40 focus:ring-2 focus:ring-white/40 focus:border-white/50 sm:text-base text-white/90 transition-all shadow-2xl"
+            style={{ minWidth: '500px' }}
           />
           {searchQuery && (
-            <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+            <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
               <button
                 type="button"
                 onClick={() => {
@@ -108,7 +193,7 @@ const SearchInterface: React.FC<SearchInterfaceProps> = ({
                   onSearch('');
                   setShowWebOptions(false);
                 }}
-                className="text-gray-400 hover:text-gray-500"
+                className="text-white/60 hover:text-white/80 transition-all p-1 rounded-full hover:bg-white/10"
               >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -126,40 +211,61 @@ const SearchInterface: React.FC<SearchInterfaceProps> = ({
 
       {/* Web Search Options Dropdown */}
       {showWebOptions && searchQuery.trim() && (onWebSearch || onDirectUrl) && (
-        <div className="absolute top-full mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg z-50">
-          {hasKnowledgeResults && (
-            <div className="px-3 py-2 text-xs text-green-600 bg-green-50 border-b border-green-100 flex items-center space-x-2">
-              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-              </svg>
-              <span>Found in your knowledge graph</span>
-            </div>
-          )}
-          
-          <div className="p-2">
-            <div className="text-xs text-gray-500 mb-2 px-2">Web Search Options:</div>
+        <div className="absolute top-full mt-2 w-full bg-black/50 backdrop-blur-2xl border border-white/30 rounded-2xl shadow-2xl z-50 glass">
+          <div className="p-4">
+            <div className="text-xs text-white/60 mb-3 px-3 py-2 font-medium bg-white/10 rounded-xl backdrop-blur-sm">Web Search Options:</div>
             
             {onWebSearch && (
               <button
                 onClick={handleWebSearch}
-                className="w-full text-left px-3 py-2 hover:bg-gray-50 rounded flex items-center space-x-2 text-sm"
+                className="w-full text-left px-4 py-3 hover:bg-white/10 rounded-xl flex items-center space-x-3 text-sm text-white/80 hover:text-white/90 transition-all mb-2 group"
               >
-                <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {currentLogo ? (
+                  <img 
+                    src={currentLogo} 
+                    alt="Website logo" 
+                    className="w-5 h-5 rounded-sm"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      target.nextElementSibling?.classList.remove('hidden');
+                    }}
+                  />
+                ) : null}
+                <svg className={`w-5 h-5 text-blue-400 ${currentLogo ? 'hidden' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
-                <span>Search web for "{searchQuery}"</span>
+                <span className="flex-1">Search web for "{searchQuery}"</span>
+                <svg className="w-4 h-4 text-white/40 group-hover:text-white/60 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
               </button>
             )}
             
             {onDirectUrl && isUrl(searchQuery) && (
               <button
                 onClick={handleDirectUrl}
-                className="w-full text-left px-3 py-2 hover:bg-gray-50 rounded flex items-center space-x-2 text-sm"
+                className="w-full text-left px-4 py-3 hover:bg-white/10 rounded-xl flex items-center space-x-3 text-sm text-white/80 hover:text-white/90 transition-all mb-2 group"
               >
-                <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9v-9m0 9c-1.657 0-3-4.03-3-9s1.343-9 3-9m0 9c1.657 0 3 4.03 3 9s-1.343 9-3-9" />
+                {currentLogo ? (
+                  <img 
+                    src={currentLogo} 
+                    alt="Website logo" 
+                    className="w-5 h-5 rounded-sm"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      target.nextElementSibling?.classList.remove('hidden');
+                    }}
+                  />
+                ) : null}
+                <svg className={`w-5 h-5 text-green-400 ${currentLogo ? 'hidden' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9v-9m0 9c-1.657 0-3-4.03-3-9s1.343-9 3-9m0 9c1.657 0 3 4.03 3 9s-1.343-9-3-9" />
                 </svg>
-                <span>Go to {searchQuery}</span>
+                <span className="flex-1">Go to {searchQuery}</span>
+                <svg className="w-4 h-4 text-white/40 group-hover:text-white/60 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
               </button>
             )}
             
@@ -169,12 +275,25 @@ const SearchInterface: React.FC<SearchInterfaceProps> = ({
                   onWebSearch(`${searchQuery} site:wikipedia.org`);
                   setShowWebOptions(false);
                 }}
-                className="w-full text-left px-3 py-2 hover:bg-gray-50 rounded flex items-center space-x-2 text-sm"
+                className="w-full text-left px-4 py-3 hover:bg-white/10 rounded-xl flex items-center space-x-3 text-sm text-white/80 hover:text-white/90 transition-all group"
               >
-                <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <img 
+                  src="https://wikipedia.org/favicon.ico" 
+                  alt="Wikipedia logo" 
+                  className="w-5 h-5 rounded-sm"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                    target.nextElementSibling?.classList.remove('hidden');
+                  }}
+                />
+                <svg className="w-5 h-5 text-purple-400 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C20.832 18.477 19.246 18 17.5 18c-1.746 0-3.332.477-4.5 1.253" />
                 </svg>
-                <span>Search Wikipedia for "{searchQuery}"</span>
+                <span className="flex-1">Search Wikipedia for "{searchQuery}"</span>
+                <svg className="w-4 h-4 text-white/40 group-hover:text-white/60 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
               </button>
             )}
           </div>

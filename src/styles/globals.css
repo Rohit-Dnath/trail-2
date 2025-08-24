@@ -2,6 +2,97 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Space Theme Enhancements */
+.space-graph {
+  background: transparent;
+}
+
+.space-graph .react-flow__background {
+  background: transparent;
+}
+
+.space-graph .react-flow__node {
+  backdrop-filter: blur(8px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.space-graph .react-flow__node:hover {
+  transform: scale(1.2);
+  filter: brightness(1.3);
+}
+
+.space-graph .react-flow__edge-path {
+  filter: drop-shadow(0 0 2px currentColor);
+}
+
+.space-graph .react-flow__controls {
+  display: none;
+}
+
+.space-graph .react-flow__attribution {
+  display: none !important;
+}
+
+/* Glassmorphism effects */
+.glass {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* Space stars animation */
+@keyframes twinkle {
+  0% { opacity: 0.3; }
+  25% { opacity: 0.8; }
+  50% { opacity: 1; }
+  75% { opacity: 0.8; }
+  100% { opacity: 0.3; }
+}
+
+.star {
+  animation: twinkle 3s infinite;
+}
+
+/* Enhanced pulse glow animation */
+@keyframes pulse-glow {
+  0%, 100% { 
+    box-shadow: 0 0 5px rgba(255, 255, 255, 0.2), 0 0 10px rgba(255, 255, 255, 0.1);
+  }
+  50% { 
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.4), 0 0 30px rgba(255, 255, 255, 0.2);
+  }
+}
+
+/* Smooth fade in animation */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+/* Custom scrollbar for space theme */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
 /* Global styles for the Chrome extension */
 * {
   box-sizing: border-box;

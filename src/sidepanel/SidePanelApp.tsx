@@ -48,6 +48,14 @@ const SidePanelApp: React.FC = () => {
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [showDashboard, setShowDashboard] = useState(true); // Default to true
+  const [showMenu, setShowMenu] = useState(false);
+  const [showSitesEditor, setShowSitesEditor] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportMainNodeText, setExportMainNodeText] = useState('');
+  const [currentTime, setCurrentTime] = useState(new Date());
   const [allNodes, setAllNodes] = useState<GraphNode[]>([]); // Store all nodes for search
   const [allEdges, setAllEdges] = useState<GraphEdge[]>([]); // Store all edges
   const [hasKnowledgeResults, setHasKnowledgeResults] = useState(false);
@@ -57,6 +65,26 @@ const SidePanelApp: React.FC = () => {
     domain: 'all'
   });
   const [isLoading, setIsLoading] = useState(true);
+
+  // Popular sites data for widget - now customizable with real logos
+  const [popularSites, setPopularSites] = useState([
+    { name: 'YouTube', url: 'https://youtube.com', logo: 'https://www.youtube.com/favicon.ico', color: 'from-red-500 to-red-600' },
+    { name: 'GitHub', url: 'https://github.com', logo: 'https://github.com/favicon.ico', color: 'from-gray-600 to-gray-700' },
+    { name: 'LinkedIn', url: 'https://linkedin.com', logo: 'https://linkedin.com/favicon.ico', color: 'from-blue-600 to-blue-700' },
+    { name: 'Twitter', url: 'https://twitter.com', logo: 'https://twitter.com/favicon.ico', color: 'from-blue-400 to-blue-500' },
+    { name: 'Reddit', url: 'https://reddit.com', logo: 'https://reddit.com/favicon.ico', color: 'from-orange-500 to-orange-600' },
+    { name: 'Stack Overflow', url: 'https://stackoverflow.com', logo: 'https://stackoverflow.com/favicon.ico', color: 'from-orange-400 to-yellow-500' },
+    { name: 'Wikipedia', url: 'https://wikipedia.org', logo: 'https://wikipedia.org/favicon.ico', color: 'from-gray-500 to-gray-600' },
+    { name: 'Google', url: 'https://google.com', logo: 'https://www.google.com/favicon.ico', color: 'from-blue-500 to-green-500' }
+  ]);
+
+  // Update clock every second
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Load graph data on component mount
   useEffect(() => {
@@ -157,16 +185,23 @@ const SidePanelApp: React.FC = () => {
           setAllNodes(graphNodes);
           setAllEdges(graphEdges);
           
-          // Transform nodes for ReactFlow
-          const flowNodes = graphNodes.map((node: any) => ({
-            ...node,
-            type: 'default',
-            style: getNodeStyle(node.type),
-            data: {
-              ...node.data,
-              label: truncateLabel(node.data.label, 30)
-            }
-          }));
+          // Transform nodes for ReactFlow with scattered positions and dynamic sizing
+          const positions: Array<{x: number, y: number}> = [];
+          const flowNodes = graphNodes.map((node: any, index: number) => {
+            const position = generateScatteredPosition(index, graphNodes.length, positions);
+            positions.push(position);
+            
+            return {
+              ...node,
+              type: 'default',
+              position,
+              style: getNodeStyle(node.type, false, graphNodes.length),
+              data: {
+                ...node.data,
+                label: truncateLabel(node.data.label, graphNodes.length <= 50 ? 8 : 3)
+              }
+            };
+          });
 
           // Transform edges for ReactFlow
           const flowEdges = graphEdges.map((edge: any) => ({
@@ -199,37 +234,646 @@ const SidePanelApp: React.FC = () => {
     setSelectedNode(node as GraphNode);
   }, []);
 
-  const getNodeStyle = (nodeType: string) => {
+  const getNodeStyle = (nodeType: string, isSearchResult = false, nodeCount = 0) => {
+    // Dynamic sizing based on node count
+    let baseSize;
+    if (nodeCount <= 10) {
+      baseSize = isSearchResult ? 60 : 24; // Larger for fewer nodes
+    } else if (nodeCount <= 50) {
+      baseSize = isSearchResult ? 50 : 18; // Medium size
+    } else if (nodeCount <= 100) {
+      baseSize = isSearchResult ? 40 : 14; // Smaller for many nodes
+    } else {
+      baseSize = isSearchResult ? 30 : 10; // Very small for lots of nodes
+    }
+
+    const showText = baseSize >= 18; // Only show text if node is large enough
+    
     const baseStyle = {
-      padding: '10px',
-      borderRadius: '8px',
-      fontSize: '12px',
-      fontWeight: '500',
-      border: '2px solid',
-      minWidth: '120px',
-      textAlign: 'center' as const
+      width: baseSize,
+      height: baseSize,
+      borderRadius: '50%',
+      fontSize: showText ? '7px' : '0px',
+      fontWeight: '600',
+      border: '1px solid',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      opacity: isSearchResult ? 1 : 0.8,
+      transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+      backdropFilter: 'blur(12px)',
+      color: showText ? '#ffffff' : 'transparent',
+      cursor: 'pointer',
+      boxShadow: isSearchResult ? '0 0 20px rgba(59, 130, 246, 0.6)' : '0 0 8px rgba(59, 130, 246, 0.3)',
+      textOverflow: 'hidden',
+      whiteSpace: 'nowrap' as const
     };
 
     switch (nodeType) {
       case 'page':
-        return { ...baseStyle, backgroundColor: '#dbeafe', borderColor: '#60a5fa', color: '#1e40af' };
+        return { 
+          ...baseStyle, 
+          backgroundColor: isSearchResult ? 'rgba(59, 130, 246, 0.9)' : 'rgba(59, 130, 246, 0.7)', 
+          borderColor: '#60a5fa'
+        };
       case 'concept':
-        return { ...baseStyle, backgroundColor: '#d1fae5', borderColor: '#34d399', color: '#065f46' };
+        return { 
+          ...baseStyle, 
+          backgroundColor: isSearchResult ? 'rgba(52, 211, 153, 0.9)' : 'rgba(52, 211, 153, 0.7)', 
+          borderColor: '#34d399'
+        };
       case 'author':
-        return { ...baseStyle, backgroundColor: '#fef3c7', borderColor: '#fbbf24', color: '#92400e' };
+        return { 
+          ...baseStyle, 
+          backgroundColor: isSearchResult ? 'rgba(251, 191, 36, 0.9)' : 'rgba(251, 191, 36, 0.7)', 
+          borderColor: '#fbbf24'
+        };
       case 'domain':
-        return { ...baseStyle, backgroundColor: '#e0e7ff', borderColor: '#a78bfa', color: '#5b21b6' };
+        return { 
+          ...baseStyle, 
+          backgroundColor: isSearchResult ? 'rgba(167, 139, 250, 0.9)' : 'rgba(167, 139, 250, 0.7)', 
+          borderColor: '#a78bfa'
+        };
       default:
-        return { ...baseStyle, backgroundColor: '#f3f4f6', borderColor: '#9ca3af', color: '#374151' };
+        return { 
+          ...baseStyle, 
+          backgroundColor: isSearchResult ? 'rgba(156, 163, 175, 0.9)' : 'rgba(156, 163, 175, 0.7)', 
+          borderColor: '#9ca3af'
+        };
     }
   };
 
   const getEdgeStyle = (strength: number) => {
     return {
-      strokeWidth: Math.max(1, strength * 3),
-      stroke: `rgba(59, 130, 246, ${Math.max(0.3, strength)})`,
+      strokeWidth: Math.max(0.5, strength * 1.5),
+      stroke: `rgba(100, 116, 139, ${Math.max(0.2, strength * 0.6)})`,
+      filter: 'drop-shadow(0 0 2px rgba(100, 116, 139, 0.3))'
     };
   };
+
+  // Generate scattered positions around the search bar with overlap prevention
+  const generateScatteredPosition = (index: number, total: number, existingPositions: Array<{x: number, y: number}> = []) => {
+    const centerX = 640; // Center of viewport
+    const centerY = 360;
+    const searchBarRadius = 180; // Keep nodes away from search bar
+    const maxRadius = 300;
+    const minDistance = 30; // Minimum distance between nodes
+    
+    let position;
+    let attempts = 0;
+    const maxAttempts = 50;
+    
+    do {
+      // Create concentric circles with some randomization
+      const ring = Math.floor(index / Math.max(8, total / 5)) + 1;
+      const angleStep = (2 * Math.PI) / Math.max(8, Math.ceil(total / ring));
+      const angle = (index * angleStep) + (Math.random() - 0.5) * 0.5;
+      const radius = searchBarRadius + (ring * (maxRadius - searchBarRadius) / 4) + (Math.random() - 0.5) * 40;
+      
+      position = {
+        x: centerX + radius * Math.cos(angle),
+        y: centerY + radius * Math.sin(angle)
+      };
+      
+      attempts++;
+    } while (
+      attempts < maxAttempts && 
+      existingPositions.some(existing => 
+        Math.sqrt(Math.pow(position.x - existing.x, 2) + Math.pow(position.y - existing.y, 2)) < minDistance
+      )
+    );
+    
+    return position;
+  };
+
+  // Arrange nodes in a grid pattern
+  const arrangeNodesInGrid = () => {
+    const cols = Math.ceil(Math.sqrt(allNodes.length));
+    const rows = Math.ceil(allNodes.length / cols);
+    const startX = 300;
+    const startY = 200;
+    const spacingX = 80;
+    const spacingY = 80;
+    
+    const updatedNodes = allNodes.map((node, index) => {
+      const col = index % cols;
+      const row = Math.floor(index / cols);
+      
+      return {
+        ...node,
+        position: {
+          x: startX + col * spacingX,
+          y: startY + row * spacingY
+        },
+        style: getNodeStyle(node.type, false, allNodes.length),
+        data: {
+          ...node.data,
+          label: truncateLabel(node.data.label, allNodes.length <= 50 ? 8 : 3)
+        }
+      };
+    });
+    
+    setNodes(updatedNodes);
+  };
+
+  // Export functionality with PNG support
+  const exportNodes = (format: 'json' | 'csv' | 'png') => {
+    if (format === 'png') {
+      setShowExportModal(true);
+      return;
+    }
+
+    const dataToExport = allNodes.map(node => ({
+      id: node.id,
+      type: node.type,
+      label: node.data.label,
+      url: node.data.url || '',
+      summary: node.data.summary || '',
+      domain: node.data.domain || '',
+      importance: node.data.importance,
+      timestamp: node.data.timestamp
+    }));
+
+    let content, filename, mimeType;
+
+    if (format === 'json') {
+      content = JSON.stringify(dataToExport, null, 2);
+      filename = 'knowledge-graph-nodes.json';
+      mimeType = 'application/json';
+    } else {
+      const headers = ['ID', 'Type', 'Label', 'URL', 'Summary', 'Domain', 'Importance', 'Timestamp'];
+      const csvContent = [
+        headers.join(','),
+        ...dataToExport.map(row => 
+          headers.map(header => {
+            const key = header.toLowerCase().replace(/\s+/g, '');
+            const value = row[key as keyof typeof row] || '';
+            return `"${String(value).replace(/"/g, '""')}"`;
+          }).join(',')
+        )
+      ].join('\n');
+      
+      content = csvContent;
+      filename = 'knowledge-graph-nodes.csv';
+      mimeType = 'text/csv';
+    }
+
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  // PNG Export function
+  const exportAsPNG = () => {
+    if (!exportMainNodeText.trim()) {
+      alert('Please enter the main node text before exporting');
+      return;
+    }
+
+    // Create a canvas to draw the knowledge graph
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    canvas.width = 1920;
+    canvas.height = 1080;
+
+    // Fill background
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Add title
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 32px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(`Knowledge Graph: ${exportMainNodeText}`, canvas.width / 2, 50);
+
+    // Draw nodes
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const radius = 200;
+
+    allNodes.forEach((node, index) => {
+      const angle = (index / allNodes.length) * 2 * Math.PI;
+      const x = centerX + radius * Math.cos(angle);
+      const y = centerY + radius * Math.sin(angle);
+
+      // Draw node circle
+      ctx.beginPath();
+      ctx.arc(x, y, 20, 0, 2 * Math.PI);
+      
+      // Node color based on type
+      switch (node.type) {
+        case 'page':
+          ctx.fillStyle = '#3b82f6';
+          break;
+        case 'concept':
+          ctx.fillStyle = '#34d399';
+          break;
+        case 'author':
+          ctx.fillStyle = '#fbbf24';
+          break;
+        case 'domain':
+          ctx.fillStyle = '#a78bfa';
+          break;
+        default:
+          ctx.fillStyle = '#9ca3af';
+      }
+      
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Draw node label
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '12px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(node.data.label.substring(0, 15), x, y + 35);
+    });
+
+    // Draw edges
+    allEdges.forEach(edge => {
+      const sourceNode = allNodes.find(n => n.id === edge.source);
+      const targetNode = allNodes.find(n => n.id === edge.target);
+      
+      if (sourceNode && targetNode) {
+        const sourceIndex = allNodes.indexOf(sourceNode);
+        const targetIndex = allNodes.indexOf(targetNode);
+        
+        const sourceAngle = (sourceIndex / allNodes.length) * 2 * Math.PI;
+        const targetAngle = (targetIndex / allNodes.length) * 2 * Math.PI;
+        
+        const sourceX = centerX + radius * Math.cos(sourceAngle);
+        const sourceY = centerY + radius * Math.sin(sourceAngle);
+        const targetX = centerX + radius * Math.cos(targetAngle);
+        const targetY = centerY + radius * Math.sin(targetAngle);
+
+        ctx.beginPath();
+        ctx.moveTo(sourceX, sourceY);
+        ctx.lineTo(targetX, targetY);
+        ctx.strokeStyle = `rgba(100, 116, 139, ${edge.data.strength * 0.8})`;
+        ctx.lineWidth = edge.data.strength * 3;
+        ctx.stroke();
+      }
+    });
+
+    // Convert to blob and download
+    canvas.toBlob((blob) => {
+      if (blob) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `knowledge-graph-${exportMainNodeText.replace(/\s+/g, '-').toLowerCase()}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        setShowExportModal(false);
+        setExportMainNodeText('');
+      }
+    }, 'image/png');
+  };
+
+  // Popular sites management
+  const addNewSite = (name: string, url: string) => {
+    if (name.trim() && url.trim()) {
+      const colors = [
+        'from-blue-500 to-blue-600',
+        'from-green-500 to-green-600',
+        'from-purple-500 to-purple-600',
+        'from-pink-500 to-pink-600',
+        'from-yellow-500 to-yellow-600',
+        'from-indigo-500 to-indigo-600'
+      ];
+      
+      const cleanUrl = url.trim().startsWith('http') ? url.trim() : `https://${url.trim()}`;
+      let logoUrl;
+      
+      try {
+        const domain = new URL(cleanUrl).hostname;
+        logoUrl = `https://${domain}/favicon.ico`;
+      } catch {
+        logoUrl = 'https://www.google.com/favicon.ico'; // Fallback
+      }
+      
+      const newSite = {
+        name: name.trim(),
+        url: cleanUrl,
+        logo: logoUrl,
+        color: colors[Math.floor(Math.random() * colors.length)]
+      };
+      
+      setPopularSites([...popularSites, newSite]);
+    }
+  };
+
+  const removeSite = (index: number) => {
+    setPopularSites(popularSites.filter((_, i) => i !== index));
+  };
+
+  // Widget helper functions
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  // Widget Components
+  const ClockWidget = () => (
+    <div className="fixed top-6 left-6 bg-black/20 backdrop-blur-xl rounded-2xl p-4 border border-white/10 min-w-[180px]">
+      <div className="text-white/90 text-2xl font-light">{formatTime(currentTime)}</div>
+      <div className="text-white/60 text-sm mt-1">{formatDate(currentTime)}</div>
+    </div>
+  );
+
+  const FilterWidget = () => (
+    <div className="fixed top-1/2 right-6 transform -translate-y-1/2">
+      <div className="relative">
+        <button
+          onClick={() => setShowFilters(!showFilters)}
+          className="bg-black/20 backdrop-blur-xl rounded-full p-3 border border-white/20 text-white/80 hover:bg-black/30 transition-all mb-4"
+          title="Filter Nodes"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.414A1 1 0 013 6.707V4z" />
+          </svg>
+        </button>
+        
+        {showFilters && (
+          <div className="absolute top-0 right-14 bg-black/30 backdrop-blur-xl rounded-2xl p-4 border border-white/20 min-w-[250px] z-50">
+            <h3 className="text-white/90 text-sm font-medium mb-3">Filter Nodes</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="text-white/70 text-xs mb-2 block">Node Type</label>
+                <select
+                  value={filters.nodeType}
+                  onChange={(e) => applyFilters({ ...filters, nodeType: e.target.value })}
+                  className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white/90 text-sm"
+                >
+                  <option value="all">All Types</option>
+                  <option value="page">Pages</option>
+                  <option value="concept">Concepts</option>
+                  <option value="author">Authors</option>
+                  <option value="domain">Domains</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="text-white/70 text-xs mb-2 block">Date Range</label>
+                <select
+                  value={filters.dateRange}
+                  onChange={(e) => applyFilters({ ...filters, dateRange: e.target.value })}
+                  className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white/90 text-sm"
+                >
+                  <option value="all">All Time</option>
+                  <option value="today">Today</option>
+                  <option value="week">This Week</option>
+                  <option value="month">This Month</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="text-white/70 text-xs mb-2 block">Domain</label>
+                <select
+                  value={filters.domain}
+                  onChange={(e) => applyFilters({ ...filters, domain: e.target.value })}
+                  className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white/90 text-sm"
+                >
+                  <option value="all">All Domains</option>
+                  {Array.from(new Set(allNodes.map(node => node.data.domain).filter(Boolean))).map(domain => (
+                    <option key={domain} value={domain}>{domain}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <button
+                onClick={() => applyFilters({ nodeType: 'all', dateRange: 'all', domain: 'all' })}
+                className="w-full px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/30 rounded-lg text-white/90 text-sm transition-all"
+              >
+                Reset Filters
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const MenuWidget = () => (
+    <div className="fixed top-6 right-6">
+      <div className="relative">
+        <button
+          onClick={() => setShowMenu(!showMenu)}
+          className="bg-black/20 backdrop-blur-xl rounded-full p-3 border border-white/20 text-white/80 hover:bg-black/30 transition-all"
+          title="Menu"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+          </svg>
+        </button>
+        
+        {showMenu && (
+          <div className="absolute top-12 right-0 bg-black/30 backdrop-blur-xl rounded-2xl p-4 border border-white/20 min-w-[200px] z-50">
+            <div className="space-y-2">
+              <button
+                onClick={() => { exportNodes('json'); setShowMenu(false); }}
+                className="w-full text-left px-3 py-2 text-white/80 hover:bg-white/10 rounded-lg transition-all text-sm"
+              >
+                Export as JSON
+              </button>
+              <button
+                onClick={() => { exportNodes('csv'); setShowMenu(false); }}
+                className="w-full text-left px-3 py-2 text-white/80 hover:bg-white/10 rounded-lg transition-all text-sm"
+              >
+                Export as CSV
+              </button>
+              <button
+                onClick={() => { exportNodes('png'); setShowMenu(false); }}
+                className="w-full text-left px-3 py-2 text-white/80 hover:bg-white/10 rounded-lg transition-all text-sm"
+              >
+                Export as PNG
+              </button>
+              <button
+                onClick={() => { arrangeNodesInGrid(); setShowMenu(false); }}
+                className="w-full text-left px-3 py-2 text-white/80 hover:bg-white/10 rounded-lg transition-all text-sm"
+              >
+                Arrange Nodes
+              </button>
+              <button
+                onClick={() => { loadGraphData(); setShowMenu(false); }}
+                className="w-full text-left px-3 py-2 text-white/80 hover:bg-white/10 rounded-lg transition-all text-sm"
+              >
+                Refresh Graph
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const PopularSitesWidget = () => {
+    const [newSiteName, setNewSiteName] = useState('');
+    const [newSiteUrl, setNewSiteUrl] = useState('');
+
+    return (
+      <div className="fixed bottom-6 left-6 bg-black/20 backdrop-blur-xl rounded-2xl p-4 border border-white/10 min-w-[220px]">
+        <div className="flex justify-between items-center mb-3">
+          <div className="text-white/90 text-sm font-medium">Popular Sites</div>
+          <button
+            onClick={() => setShowSitesEditor(!showSitesEditor)}
+            className="text-white/60 hover:text-white/80 transition-all"
+            title="Edit Sites"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+          </button>
+        </div>
+        
+        {showSitesEditor && (
+          <div className="mb-4 space-y-2">
+            <input
+              type="text"
+              placeholder="Site name"
+              value={newSiteName}
+              onChange={(e) => setNewSiteName(e.target.value)}
+              className="w-full px-2 py-1 bg-white/10 border border-white/20 rounded text-white/90 text-xs placeholder-white/50"
+            />
+            <input
+              type="text"
+              placeholder="Site URL"
+              value={newSiteUrl}
+              onChange={(e) => setNewSiteUrl(e.target.value)}
+              className="w-full px-2 py-1 bg-white/10 border border-white/20 rounded text-white/90 text-xs placeholder-white/50"
+            />
+            <button
+              onClick={() => {
+                addNewSite(newSiteName, newSiteUrl);
+                setNewSiteName('');
+                setNewSiteUrl('');
+              }}
+              className="w-full px-2 py-1 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-400/30 rounded text-white/90 text-xs transition-all"
+            >
+              Add Site
+            </button>
+          </div>
+        )}
+        
+        <div className="grid grid-cols-2 gap-2">
+          {popularSites.map((site, index) => (
+            <div 
+              key={index}
+              className="flex items-center space-x-2 p-2 rounded-xl bg-white/5 hover:bg-white/10 transition-all cursor-pointer group"
+            >
+              <img 
+                src={site.logo} 
+                alt={`${site.name} logo`} 
+                className="w-4 h-4 rounded-sm cursor-pointer"
+                onClick={() => window.open(site.url, '_blank')}
+                onError={(e) => {
+                  // Fallback to colored circle if logo fails
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                  target.nextElementSibling?.classList.remove('hidden');
+                }}
+              />
+              <div 
+                className={`w-4 h-4 rounded-full bg-gradient-to-br ${site.color} hidden cursor-pointer`}
+                onClick={() => window.open(site.url, '_blank')}
+              />
+              <span 
+                className="text-white/80 text-xs truncate flex-1 cursor-pointer"
+                onClick={() => window.open(site.url, '_blank')}
+              >
+                {site.name}
+              </span>
+              {showSitesEditor && (
+                <button
+                  onClick={() => removeSite(index)}
+                  className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 transition-all"
+                >
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const PopularSitesBelowSearch = () => (
+    <div className="absolute top-full mt-6 left-1/2 transform -translate-x-1/2 z-10">
+      <div className="bg-black/30 backdrop-blur-xl rounded-2xl p-4 border border-white/20">
+        <div className="flex items-center justify-center space-x-4">
+          {popularSites.slice(0, 8).map((site, index) => (
+            <button
+              key={index}
+              onClick={() => window.open(site.url, '_blank')}
+              className="flex flex-col items-center space-y-2 p-3 rounded-xl bg-white/5 hover:bg-white/15 transition-all group"
+              title={site.name}
+            >
+              <img 
+                src={site.logo} 
+                alt={`${site.name} logo`} 
+                className="w-8 h-8 rounded-lg group-hover:scale-110 transition-transform"
+                onError={(e) => {
+                  // Fallback to colored circle if logo fails
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                  target.nextElementSibling?.classList.remove('hidden');
+                }}
+              />
+              <div 
+                className={`w-8 h-8 rounded-lg bg-gradient-to-br ${site.color} hidden group-hover:scale-110 transition-transform`}
+                style={{ display: 'none', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <span className="text-white text-xs font-bold">{site.name.charAt(0)}</span>
+              </div>
+              <span className="text-white/70 text-xs group-hover:text-white/90 transition-colors">
+                {site.name}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  const DashboardToggle = () => (
+    <div className="fixed bottom-6 right-6">
+      <button
+        onClick={() => setShowDashboard(!showDashboard)}
+        className="bg-black/20 backdrop-blur-xl rounded-full p-3 border border-white/20 text-white/80 hover:bg-black/30 transition-all"
+        title={showDashboard ? "Hide Dashboard" : "Show Dashboard"}
+      >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+    </div>
+  );
 
   const truncateLabel = (label: string, maxLength: number) => {
     return label.length > maxLength ? `${label.substring(0, maxLength)}...` : label;
@@ -237,24 +881,36 @@ const SidePanelApp: React.FC = () => {
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
+    setIsSearching(!!query.trim());
     
     if (!query.trim()) {
-      // Reset to show all nodes
-      setNodes(allNodes.map((node: any) => ({
-        ...node,
-        type: 'default',
-        style: getNodeStyle(node.type),
-        data: {
-          ...node.data,
-          label: truncateLabel(node.data.label, 30)
-        }
-      })));
-      setEdges(allEdges.map((edge: any) => ({
+      // Reset to show all nodes in scattered positions
+      const positions: Array<{x: number, y: number}> = [];
+      const flowNodes = allNodes.map((node: any, index: number) => {
+        const position = generateScatteredPosition(index, allNodes.length, positions);
+        positions.push(position);
+        
+        return {
+          ...node,
+          type: 'default',
+          position,
+          style: getNodeStyle(node.type, false, allNodes.length),
+          data: {
+            ...node.data,
+            label: truncateLabel(node.data.label, allNodes.length <= 50 ? 8 : 3)
+          }
+        };
+      });
+
+      const flowEdges = allEdges.map((edge: any) => ({
         ...edge,
         type: 'default',
         style: getEdgeStyle(edge.data.strength),
-        animated: edge.data.strength > 0.7
-      })));
+        animated: false
+      }));
+
+      setNodes(flowNodes);
+      setEdges(flowEdges);
       setHasKnowledgeResults(false);
       return;
     }
@@ -273,14 +929,18 @@ const SidePanelApp: React.FC = () => {
       filteredNodeIds.has(edge.source) && filteredNodeIds.has(edge.target)
     );
 
-    // Transform for ReactFlow
-    const flowNodes = filteredNodes.map((node: any) => ({
+    // Transform for ReactFlow with enhanced styling for search results
+    const flowNodes = filteredNodes.map((node: any, index: number) => ({
       ...node,
       type: 'default',
-      style: getNodeStyle(node.type),
+      position: {
+        x: 500 + (index % 3) * 150,
+        y: 250 + Math.floor(index / 3) * 120
+      },
+      style: getNodeStyle(node.type, true, filteredNodes.length),
       data: {
         ...node.data,
-        label: truncateLabel(node.data.label, 30)
+        label: truncateLabel(node.data.label, 15)
       }
     }));
 
@@ -288,7 +948,7 @@ const SidePanelApp: React.FC = () => {
       ...edge,
       type: 'default',
       style: getEdgeStyle(edge.data.strength),
-      animated: edge.data.strength > 0.7
+      animated: true
     }));
 
     setNodes(flowNodes);
@@ -391,105 +1051,172 @@ const SidePanelApp: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-full bg-gray-50">
+      <div className="flex items-center justify-center h-full bg-black">
         <div className="text-center">
           <div className="mb-4 flex justify-center">
-            <svg className="animate-spin w-8 h-8 text-primary-600" fill="none" viewBox="0 0 24 24">
+            <svg className="animate-spin w-8 h-8 text-blue-400" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
           </div>
-          <p className="text-gray-600">Loading knowledge graph...</p>
+          <p className="text-white/70">Loading knowledge graph...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-full bg-gray-50">
-      {/* Sidebar */}
-      <KnowledgeGraphSidebar
-        onSearch={handleSearch}
-        onFilterChange={applyFilters}
-        filters={filters}
-        nodeCount={nodes.length}
-        edgeCount={edges.length}
-      />
+    <div className="h-full relative overflow-hidden bg-black">
+      {/* Enhanced Blinking Stars Background */}
+      <div className="absolute inset-0 bg-black">
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-900/30 via-black to-gray-900/30"></div>
+        {/* Multiple layers of blinking stars */}
+        <div className="absolute inset-0" style={{
+          backgroundImage: `
+            radial-gradient(1px 1px at 20px 30px, rgba(255,255,255,0.3), transparent),
+            radial-gradient(1px 1px at 40px 70px, rgba(255,255,255,0.2), transparent),
+            radial-gradient(2px 2px at 90px 40px, rgba(255,255,255,0.25), transparent),
+            radial-gradient(1px 1px at 130px 80px, rgba(255,255,255,0.15), transparent),
+            radial-gradient(2px 2px at 160px 30px, rgba(255,255,255,0.2), transparent),
+            radial-gradient(1px 1px at 200px 60px, rgba(255,255,255,0.1), transparent),
+            radial-gradient(1px 1px at 250px 90px, rgba(255,255,255,0.2), transparent),
+            radial-gradient(2px 2px at 300px 20px, rgba(255,255,255,0.15), transparent)
+          `,
+          backgroundRepeat: 'repeat',
+          backgroundSize: '350px 150px',
+          animation: 'twinkle 4s ease-in-out infinite alternate'
+        }}></div>
+        {/* Secondary star layer */}
+        <div className="absolute inset-0" style={{
+          backgroundImage: `
+            radial-gradient(1px 1px at 100px 120px, rgba(59,130,246,0.3), transparent),
+            radial-gradient(1px 1px at 180px 50px, rgba(167,139,250,0.2), transparent),
+            radial-gradient(1px 1px at 280px 100px, rgba(52,211,153,0.2), transparent)
+          `,
+          backgroundRepeat: 'repeat',
+          backgroundSize: '400px 200px',
+          animation: 'twinkle 6s ease-in-out infinite alternate-reverse'
+        }}></div>
+      </div>
 
-      {/* Main Graph Area */}
-      <div className="flex-1 relative">
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onNodeClick={onNodeClick}
-          fitView
-          attributionPosition="bottom-left"
-        >
-          <Controls />
-          <Background color="#f1f5f9" gap={20} />
-          <MiniMap
-            nodeStrokeColor={(n) => {
-              if (n.type === 'page') return '#60a5fa';
-              if (n.type === 'concept') return '#34d399';
-              if (n.type === 'author') return '#fbbf24';
-              if (n.type === 'domain') return '#a78bfa';
-              return '#9ca3af';
-            }}
-            nodeColor={(n) => {
-              if (n.type === 'page') return '#dbeafe';
-              if (n.type === 'concept') return '#d1fae5';
-              if (n.type === 'author') return '#fef3c7';
-              if (n.type === 'domain') return '#e0e7ff';
-              return '#f3f4f6';
-            }}
-            nodeBorderRadius={8}
-            position="bottom-right"
-          />
-        </ReactFlow>
+      {/* Main Content Area */}
+      <div className="relative h-full">
+        {/* Centered Search Bar - Clean Design */}
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20">
+          <div className="min-w-[500px] max-w-[600px]">
+            <SearchInterface
+              onSearch={handleSearch}
+              onWebSearch={handleWebSearch}
+              onDirectUrl={handleDirectUrl}
+              placeholder="Ask anything or search..."
+              value={searchQuery}
+              hasKnowledgeResults={hasKnowledgeResults}
+            />
+            {/* Popular Sites below search bar */}
+            <PopularSitesBelowSearch />
+          </div>
+        </div>
+
+        {/* Knowledge Graph Visualization */}
+        <div className="absolute inset-0">
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            onNodeClick={onNodeClick}
+            fitView={false}
+            attributionPosition="bottom-left"
+            proOptions={{ hideAttribution: true }}
+            className="space-graph"
+          >
+            <Background 
+              color="rgba(100, 116, 139, 0.02)" 
+              gap={80} 
+              size={0.3}
+              className="opacity-20"
+            />
+          </ReactFlow>
+        </div>
+
+        {/* Always show menu and filter */}
+        <MenuWidget />
+        <FilterWidget />
+
+        {/* Widgets - Show by default */}
+        <ClockWidget />
+        <PopularSitesWidget />
+
+        {/* Dashboard Toggle */}
+        <DashboardToggle />
+
+        {/* PNG Export Modal */}
+        {showExportModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="bg-black/60 backdrop-blur-2xl rounded-2xl p-6 border border-white/20 max-w-md w-full mx-4">
+              <h3 className="text-white/90 text-lg font-medium mb-4">Export as PNG</h3>
+              <p className="text-white/70 text-sm mb-4">
+                Please enter the main topic or theme for your knowledge graph:
+              </p>
+              <input
+                type="text"
+                value={exportMainNodeText}
+                onChange={(e) => setExportMainNodeText(e.target.value)}
+                placeholder="e.g., Machine Learning Research"
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white/90 placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/30 mb-4"
+              />
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => {
+                    setShowExportModal(false);
+                    setExportMainNodeText('');
+                  }}
+                  className="flex-1 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/30 rounded-xl text-white/80 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={exportAsPNG}
+                  className="flex-1 px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-400/30 rounded-xl text-white/90 transition-all"
+                >
+                  Export PNG
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Node Detail Panel */}
         {selectedNode && (
-          <NodeDetailPanel
-            node={selectedNode}
-            onClose={closeNodeDetail}
-          />
+          <div className="fixed top-4 right-4 bg-black/40 backdrop-blur-2xl rounded-2xl p-6 border border-white/20 max-w-sm z-30 glass">
+            <NodeDetailPanel 
+              node={selectedNode} 
+              onClose={closeNodeDetail}
+            />
+          </div>
         )}
-
-        {/* Search Interface Overlay */}
-        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10">
-          <SearchInterface
-            onSearch={handleSearch}
-            onWebSearch={handleWebSearch}
-            onDirectUrl={handleDirectUrl}
-            placeholder="Search your knowledge graph or the web..."
-            value={searchQuery}
-            hasKnowledgeResults={hasKnowledgeResults}
-          />
-        </div>
 
         {/* Empty State */}
         {nodes.length === 0 && !isLoading && (
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center">
+            {/* <div className="text-center bg-black/40 backdrop-blur-2xl rounded-3xl p-8 border border-white/20 glass">
               <div className="mb-4 flex justify-center">
-                <svg className="w-16 h-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-16 h-16 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                 </svg>
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No Content Captured Yet</h3>
-              <p className="text-gray-600 mb-4">
+              <h3 className="text-lg font-medium text-white/80 mb-2">No Content Captured Yet</h3>
+              <p className="text-white/50 mb-4 max-w-sm">
                 Start browsing the web and Traily will automatically build your knowledge graph.
               </p>
               <button
                 onClick={loadGraphData}
-                className="bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-700"
+                className="bg-white/10 backdrop-blur-sm border border-white/30 text-white px-6 py-2 rounded-2xl font-medium hover:bg-white/20 transition-all"
               >
                 Refresh
               </button>
-            </div>
+            </div> */}
           </div>
         )}
       </div>
