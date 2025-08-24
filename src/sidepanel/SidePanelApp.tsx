@@ -400,20 +400,12 @@ const SidePanelApp: React.FC = () => {
               <p className="text-gray-600 mb-4">
                 Start browsing the web and Traily will automatically build your knowledge graph.
               </p>
-              <div className="space-x-2">
-                <button
-                  onClick={loadGraphData}
-                  className="bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-700"
-                >
-                  Refresh
-                </button>
-                <button
-                  onClick={addSampleData}
-                  className="bg-gray-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-700"
-                >
-                  Load Sample Data
-                </button>
-              </div>
+              <button
+                onClick={loadGraphData}
+                className="bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-700"
+              >
+                Refresh
+              </button>
             </div>
           </div>
         )}
