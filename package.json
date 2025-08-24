@@ -1,0 +1,52 @@
+{
+  "name": "traily-chrome-extension",
+  "version": "1.0.0",
+  "description": "Local-first research assistant with dynamic knowledge graphing using Google Gemini 2.5 Flash API",
+  "private": true,
+  "scripts": {
+    "build": "webpack --mode=production",
+    "build:dev": "webpack --mode=development",
+    "watch": "webpack --mode=development --watch",
+    "clean": "rimraf dist",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint src --ext .ts,.tsx",
+    "format": "prettier --write \"src/**/*.{ts,tsx,json,css}\""
+  },
+  "dependencies": {
+    "@reactflow/background": "^11.3.0",
+    "@reactflow/controls": "^11.2.0",
+    "@reactflow/core": "^11.10.1",
+    "@reactflow/minimap": "^11.7.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "reactflow": "^11.10.1"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.246",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "autoprefixer": "^10.4.21",
+    "copy-webpack-plugin": "^11.0.0",
+    "css-loader": "^6.8.1",
+    "eslint": "^8.45.0",
+    "eslint-plugin-react": "^7.33.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "html-webpack-plugin": "^5.5.3",
+    "mini-css-extract-plugin": "^2.7.6",
+    "postcss": "^8.4.27",
+    "postcss-loader": "^7.3.3",
+    "prettier": "^3.0.0",
+    "rimraf": "^5.0.1",
+    "style-loader": "^3.3.3",
+    "tailwindcss": "^3.3.3",
+    "ts-loader": "^9.4.4",
+    "typescript": "^5.1.6",
+    "webpack": "^5.88.2",
+    "webpack-cli": "^5.1.4"
+  },
+  "browserslist": [
+    "last 1 Chrome version"
+  ]
+}
