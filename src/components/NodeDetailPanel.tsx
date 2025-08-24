@@ -190,7 +190,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, onClose }) => {
               Visit Page
             </button>
           )}
-          <button
+          {/* <button
             onClick={() => {
               // TODO: Implement focus on node in graph
               console.log('Focus on node:', node.id);
@@ -198,7 +198,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, onClose }) => {
             className="flex-1 bg-gray-200 text-gray-700 text-sm font-medium py-2 px-3 rounded hover:bg-gray-300 transition-colors"
           >
             Focus
-          </button>
+          </button> */}
         </div>
       </div>
     </div>

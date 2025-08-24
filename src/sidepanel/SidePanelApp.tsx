@@ -14,6 +14,7 @@ import 'reactflow/dist/style.css';
 import KnowledgeGraphSidebar from '../components/KnowledgeGraphSidebar';
 import NodeDetailPanel from '../components/NodeDetailPanel';
 import SearchInterface from '../components/SearchInterface';
+import { Spotlight } from '../components/ui/spotlight';
 
 interface GraphNodeData {
   label: string;
@@ -598,7 +599,7 @@ const SidePanelApp: React.FC = () => {
   const FilterWidget = () => (
     <div className="fixed top-1/2 right-6 transform -translate-y-1/2">
       <div className="relative">
-        <button
+        {/* <button
           onClick={() => setShowFilters(!showFilters)}
           className="bg-black/20 backdrop-blur-xl rounded-full p-3 border border-white/20 text-white/80 hover:bg-black/30 transition-all mb-4"
           title="Filter Nodes"
@@ -606,7 +607,7 @@ const SidePanelApp: React.FC = () => {
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.414A1 1 0 013 6.707V4z" />
           </svg>
-        </button>
+        </button> */}
         
         {showFilters && (
           <div className="absolute top-0 right-14 bg-black/30 backdrop-blur-xl rounded-2xl p-4 border border-white/20 min-w-[250px] z-50">
@@ -1025,6 +1026,20 @@ const SidePanelApp: React.FC = () => {
 
   return (
     <div className="h-full relative overflow-hidden bg-black">
+      {/* Aceternity UI Spotlight Background */}
+      <Spotlight
+        className="-top-40 left-0 md:left-60 md:-top-20"
+        fill="white"
+      />
+      <Spotlight
+        className="top-10 left-full transform -translate-x-1/2"
+        fill="purple"
+      />
+      <Spotlight
+        className="top-28 left-80 h-[80vh] w-[50vw]"
+        fill="blue"
+      />
+      
       {/* Enhanced Blinking Stars Background */}
       <div className="absolute inset-0 bg-black">
         <div className="absolute inset-0 bg-gradient-to-br from-gray-900/30 via-black to-gray-900/30"></div>

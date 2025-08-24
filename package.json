@@ -17,9 +17,11 @@
     "@reactflow/controls": "^11.2.0",
     "@reactflow/core": "^11.10.1",
     "@reactflow/minimap": "^11.7.0",
+    "clsx": "^2.1.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "reactflow": "^11.10.1"
+    "reactflow": "^11.10.1",
+    "tailwind-merge": "^3.3.1"
   },
   "devDependencies": {
     "@types/chrome": "^0.0.246",

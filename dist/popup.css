@@ -546,6 +546,9 @@ video {
   top: 0px;
   bottom: 0px;
 }
+.-top-40 {
+  top: -10rem;
+}
 .bottom-6 {
   bottom: 1.5rem;
 }
@@ -557,6 +560,12 @@ video {
 }
 .left-6 {
   left: 1.5rem;
+}
+.left-80 {
+  left: 20rem;
+}
+.left-full {
+  left: 100%;
 }
 .right-0 {
   right: 0px;
@@ -576,8 +585,14 @@ video {
 .top-1\/2 {
   top: 50%;
 }
+.top-10 {
+  top: 2.5rem;
+}
 .top-12 {
   top: 3rem;
+}
+.top-28 {
+  top: 7rem;
 }
 .top-4 {
   top: 1rem;
@@ -599,6 +614,9 @@ video {
 }
 .z-50 {
   z-index: 50;
+}
+.z-\[1\] {
+  z-index: 1;
 }
 .mx-4 {
   margin-left: 1rem;
@@ -655,6 +673,12 @@ video {
 .h-8 {
   height: 2rem;
 }
+.h-\[169\%\] {
+  height: 169%;
+}
+.h-\[80vh\] {
+  height: 80vh;
+}
 .h-full {
   height: 100%;
 }
@@ -675,6 +699,12 @@ video {
 }
 .w-8 {
   width: 2rem;
+}
+.w-\[138\%\] {
+  width: 138%;
+}
+.w-\[50vw\] {
+  width: 50vw;
 }
 .w-full {
   width: 100%;
@@ -1328,6 +1358,9 @@ video {
 .placeholder-white\/50::placeholder {
   color: rgb(255 255 255 / 0.5);
 }
+.opacity-0 {
+  opacity: 0;
+}
 .opacity-20 {
   opacity: 0.2;
 }
@@ -1400,6 +1433,22 @@ video {
 }
 .ease-in-out {
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Aceternity UI Spotlight Animation */
+@keyframes spotlight {
+  0% {
+    opacity: 0;
+    transform: translate(-72%, -62%) scale(0.5);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -40%) scale(1);
+  }
+}
+
+.animate-spotlight {
+  animation: spotlight 2s ease 0.75s 1 forwards;
 }
 
 /* Space Theme Enhancements */
@@ -1839,6 +1888,22 @@ body {
   .sm\:text-base {
     font-size: 1rem;
     line-height: 1.5rem;
+  }
+}
+@media (min-width: 768px) {
+
+  .md\:-top-20 {
+    top: -5rem;
+  }
+
+  .md\:left-60 {
+    left: 15rem;
+  }
+}
+@media (min-width: 1024px) {
+
+  .lg\:w-\[84\%\] {
+    width: 84%;
   }
 }
 
