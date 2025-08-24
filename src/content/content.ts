@@ -318,4 +318,24 @@ class ContentExtractor {
       return false;
     }
 
-    // Avoid pages that are primarily navigation o
+    // Avoid pages that are primarily navigation or listings
+    const navigationIndicators = [
+      /^(home|index|menu|navigation|sitemap)$/i,
+      /^(404|error|not found)$/i,
+      /^(login|register|signup)$/i
+    ];
+
+    if (navigationIndicators.some(pattern => pattern.test(content.title))) {
+      return false;
+    }
+
+    return true;
+  }
+}
+
+// Initialize content extraction when script loads
+try {
+  new ContentExtractor();
+} catch (error) {
+  console.error('Traily content script initialization failed:', error);
+}

@@ -369,4 +369,18 @@ class BackgroundService {
   }
 
   private async initializeExtension() {
-    console.log(
+    console.log('Traily extension initialized');
+    
+    // Initialize configuration with API key
+    await ConfigManager.initialize();
+    
+    // Set default settings
+    await this.storageManager.initializeSettings();
+    
+    // Set up side panel
+    await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+  }
+}
+
+// Initialize the background service
+new BackgroundService();

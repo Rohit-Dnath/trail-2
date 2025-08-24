@@ -344,4 +344,82 @@ const SidePanelApp: React.FC = () => {
       <div className="flex-1 relative">
         <ReactFlow
           nodes={nodes}
-          edges={ed
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
+          onNodeClick={onNodeClick}
+          fitView
+          attributionPosition="bottom-left"
+        >
+          <Controls />
+          <Background color="#f1f5f9" gap={20} />
+          <MiniMap
+            nodeStrokeColor={(n) => {
+              if (n.type === 'page') return '#60a5fa';
+              if (n.type === 'concept') return '#34d399';
+              if (n.type === 'author') return '#fbbf24';
+              if (n.type === 'domain') return '#a78bfa';
+              return '#9ca3af';
+            }}
+            nodeColor={(n) => {
+              if (n.type === 'page') return '#dbeafe';
+              if (n.type === 'concept') return '#d1fae5';
+              if (n.type === 'author') return '#fef3c7';
+              if (n.type === 'domain') return '#e0e7ff';
+              return '#f3f4f6';
+            }}
+            nodeBorderRadius={8}
+            position="bottom-right"
+          />
+        </ReactFlow>
+
+        {/* Node Detail Panel */}
+        {selectedNode && (
+          <NodeDetailPanel
+            node={selectedNode}
+            onClose={closeNodeDetail}
+          />
+        )}
+
+        {/* Search Interface Overlay */}
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10">
+          <SearchInterface
+            onSearch={handleSearch}
+            placeholder="Search pages, concepts, or content..."
+            value={searchQuery}
+          />
+        </div>
+
+        {/* Empty State */}
+        {nodes.length === 0 && !isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center">
+              <div className="text-6xl text-gray-300 mb-4">🕸️</div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No Content Captured Yet</h3>
+              <p className="text-gray-600 mb-4">
+                Start browsing the web and Traily will automatically build your knowledge graph.
+              </p>
+              <div className="space-x-2">
+                <button
+                  onClick={loadGraphData}
+                  className="bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-700"
+                >
+                  Refresh
+                </button>
+                <button
+                  onClick={addSampleData}
+                  className="bg-gray-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-700"
+                >
+                  Load Sample Data
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default SidePanelApp;
